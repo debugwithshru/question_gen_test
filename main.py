@@ -54,5 +54,7 @@ def solve():
         }), 400
 
 if __name__ == '__main__':
-    # Render uses gunicorn, but this allows for local testing too
-    app.run(host='0.0.0.0', port=8080)
+    import os
+    # Render provides the port via an environment variable
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port)
