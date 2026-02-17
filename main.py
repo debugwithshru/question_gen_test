@@ -1,16 +1,23 @@
+from flask import Flask, request, jsonify
+import math
+from fractions import Fraction
+
+# 1. YOU MUST DEFINE 'app' FIRST
+app = Flask(__name__)
+
+# 2. THEN YOU CAN USE '@app.route'
+@app.route('/')
+def home():
+    return "Math Solver API is Online!"
+
 @app.route('/solve', methods=['POST'])
 def solve():
     try:
         data = request.json
         logic_code = data.get('logic', '')
         
-        # SMARTER VARIABLE LOADING
-        # First, try to get the nested 'variables' dictionary
+        # Using the smarter variable loading we discussed
         variables = data.get('variables', {})
-        
-        # If 'variables' was a string like "[object Object]", it might be empty.
-        # So, we also pull everything from the top level of 'data' 
-        # to make sure we don't miss 'a', 'b', etc.
         combined_scope = {**data, **variables} 
         
         local_scope = combined_scope.copy()
@@ -26,5 +33,7 @@ def solve():
         
         return jsonify({"result": str(result), "status": "success"})
     except Exception as e:
-        # This will now tell us EXACTLY what 'data' looked like if it fails
         return jsonify({"error": str(e), "received_data": data}), 400
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080)
