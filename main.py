@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 import math
 from fractions import Fraction
+import os
 
 # 1. Define the Flask app FIRST to avoid NameErrors
 app = Flask(__name__)
@@ -19,14 +20,26 @@ def solve():
 
         logic_code = data.get('logic', '')
         
+        # NEW: Get the raw question text (e.g., "Evaluate {a} + {b}")
+        question_template = data.get('question_text', '')
+
         # Pull variables (a, b, c, etc.)
-        # We also merge them with the top-level data as a backup
         variables = data.get('variables', {})
         if not isinstance(variables, dict):
             variables = {}
-            
+
+        # ---------------------------------------------------------
+        # NEW FEATURE: Formatting the Question String in Python
+        # ---------------------------------------------------------
+        try:
+            # Python's .format() automatically replaces {a} with the value of a, etc.
+            # This handles ANY number of variables (a, b, c, x, y...)
+            formatted_question = question_template.format(**variables)
+        except Exception:
+            # If formatting fails (e.g., a missing variable), return the original text
+            formatted_question = question_template
+
         # Create a combined scope containing your math variables
-        # This ensures 'a' and 'b' are available to the script
         exec_globals = {**data, **variables}
         exec_globals['math'] = math
         exec_globals['Fraction'] = Fraction
@@ -37,13 +50,17 @@ def solve():
             wrapper_code += f"    {line}\n"
             
         # Execute the wrapper using exec_globals for both global and local scope
-        # This is the "Magic" that fixes "name 'a' is not defined"
         exec(wrapper_code, exec_globals)
         
         # Run the newly created solver() function
         result = exec_globals['solver']()
         
-        return jsonify({"result": str(result), "status": "success"})
+        # Return result AND the clean, formatted question text
+        return jsonify({
+            "result": str(result), 
+            "question": formatted_question,  # <--- The formatted string is sent back here!
+            "status": "success"
+        })
 
     except Exception as e:
         # If it fails, we return the error AND the data we received to help debug
@@ -54,7 +71,6 @@ def solve():
         }), 400
 
 if __name__ == '__main__':
-    import os
     # Render provides the port via an environment variable
     port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port)
