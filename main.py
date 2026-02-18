@@ -70,7 +70,7 @@ def solve():
             "received_data": data
         }), 400
 import uuid
-import pdfkit
+from weasyprint import HTML
 import requests
 from docx import Document
 
@@ -96,8 +96,9 @@ def convert():
         with open(html_file,"w",encoding="utf-8") as f:
             f.write(html)
 
-        # PDF
-        pdfkit.from_file(html_file, pdf_file)
+        # PDF using weasyprint
+        HTML(string=html).write_pdf(pdf_file)
+
 
         # WORD
         doc = Document()
