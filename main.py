@@ -69,6 +69,53 @@ def solve():
             "status": "error",
             "received_data": data
         }), 400
+import uuid
+import pdfkit
+import requests
+from docx import Document
+
+N8N_WEBHOOK = "https://example.com"
+
+@app.route('/convert', methods=['POST'])
+def convert():
+    try:
+        data = request.json
+        html = data.get("html")
+        chat_id = data.get("chat_id")
+
+        if not html:
+            return jsonify({"error":"no html"}),400
+
+        uid = str(uuid.uuid4())
+
+        html_file = f"{uid}.html"
+        pdf_file = f"{uid}.pdf"
+        docx_file = f"{uid}.docx"
+
+        # save html
+        with open(html_file,"w",encoding="utf-8") as f:
+            f.write(html)
+
+        # PDF
+        pdfkit.from_file(html_file, pdf_file)
+
+        # WORD
+        doc = Document()
+        doc.add_paragraph(html)
+        doc.save(docx_file)
+
+        # send back to n8n webhook
+        files = {
+            "pdf": open(pdf_file,"rb"),
+            "docx": open(docx_file,"rb")
+        }
+
+        requests.post(N8N_WEBHOOK, files=files, data={"chat_id":chat_id})
+
+        return jsonify({"status":"sent back to n8n"})
+
+    except Exception as e:
+        return jsonify({"error":str(e)})
 
 if __name__ == '__main__':
     # Render provides the port via an environment variable
